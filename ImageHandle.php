@@ -1,134 +1,55 @@
 <?php
 
-class ImageHandle
-{
-	protected $_allowMimes = [
-		'image/jpeg',
-		'image/png',
-		'image/jpg',
-		'image/gif',
-	];
-	
-	protected $imageUrl = '';
-	protected $pixelZoomX = 10;
-	protected $pixelZoomY = 0;
-	protected $imageInfo = [];
-	protected $imageContext = null;
-	protected $writerContext = null;
-	
-	/**
-	 * ImageHandle constructor.
-	 * @param WriterMiddleware $writerContext
-	 * @param string $imageUrl
-	 * @param int $pixelZoomX
-	 */
-	public function __construct(WriterMiddleware $writerContext,string $imageUrl,int $pixelZoomX=10)
-	{
-		$this->writerContext = $writerContext;
-		$this->imageUrl = $imageUrl;
-		$this->pixelZoomX = $pixelZoomX;
+$chars = [
+	'@',
+	'%',
+	'#',
+	'*',
+	'+',
+	'=',
+	'-',
+	':',
+	'.',
+	' ',
+];
+$imageUrl = 'https://s1.ax1x.com/2018/06/08/Cbn7o8.jpg';
+$imageString = file_get_contents($imageUrl);
+$imageContext = imagecreatefromstring($imageString);
+
+$imageInfo = getimagesize($imageUrl);
+$width = $imageInfo[0];
+$height = $imageInfo[1];
+$pixelZoomX= 10;
+$pixelZoomY = ceil($pixelZoomX/($width/$height));
+
+$imageNewContext = imagecreatetruecolor($width,$height);
+$white = imagecolorallocate($imageNewContext, 255, 255, 255);
+imagefill($imageNewContext, 0, 0, $white);
+$black = imagecolorallocate($imageNewContext, 0, 0, 0);
+for ($y = 0;$y < $height; $y+=$pixelZoomY) {
+	for ($x = 0;$x < $width; $x+=$pixelZoomX) {
+		$colors = imagecolorsforindex($imageContext, imagecolorat($imageContext, $x, $y));
+		$r = $colors['red'];
+		$g = $colors['green'];
+		$b = $colors['blue'];
+		$a = $colors['alpha'];
+		//灰度图片
+//		$gray = (0.299 * $r + 0.578 * $g + 0.114 * $b);
+//		$color = imagecolorallocate($imageNewContext, $gray, $gray, $gray);
+//		imagestring($imageNewContext,1,$x,$y,'@',$color);
+		//彩色图片
+		$gray = (0.299 * $r + 0.578 * $g + 0.114 * $b)/255;
+		$index = ceil($gray*(count($chars)-1));
+		$char = $chars[$index];
+		$color = imagecolorallocate($imageNewContext, $r, $g, $b);
+		imagestring($imageNewContext,1,$x,$y,$char,$color);
+		//网页字串
+//	    echo "<span style='color:rgb({$r},{$g},{$b});'>#</span>";
+		//ToDO 文件字串
 	}
-	
-	/**
-	 * @param string $name
-	 */
-	public function start(string $name)
-	{
-		try {
-			$this->validate($this->imageUrl);
-			$this->imageContext = $this->getContext($this->imageUrl);
-			$this->writerContext->setImageWidth($this->imageInfo[0]);
-			$this->writerContext->setImageHeight($this->imageInfo[1]);
-			$this->writerContext->init();
-			$this->setZoomY();
-			$this->scan($this->imageContext, $this->imageInfo[0],$this->imageInfo[1]);
-			
-			$this->writerContext->save($name);
-			$this->writerContext->destroy();
-			$code = 200;
-			$message ='ok';
-		} catch (Exception $e) {
-			$code = $e->getCode();
-			$message = $e->getMessage();
-		}
-		echo json_encode(['code'=>$code,'message'=>$message]);
-		exit();
-	}
-	
-	/**
-	 * @param $imageContext
-	 * @param int $width
-	 * @param int $height
-	 * @return array
-	 * @throws Exception
-	 */
-	protected function scan($imageContext,  int $width, int $height)
-	{
-		$result = [];
-		for ($x = 0; $x < $width; $x+=$this->pixelZoomX) {
-			for ($y = 0; $y < $height; $y+=$this->pixelZoomY) {
-				$colors = imagecolorsforindex($imageContext, imagecolorat($imageContext, $x, $y));
-				if (empty($colors)) {
-					throw new \Exception('获取图片颜色失败', 400);
-				}
-				$this->writerContext->setColors($colors);
-				
-				$gray = $this->writerContext->getGray($colors);
-				$ascii = $this->writerContext->gray2ascii($this->writerContext,$gray);
-				$this->writerContext->write($ascii,$x,$y);
-			}
-		}
-		return $result;
-	}
-	
-	/**
-	 * @param string $imageUrl
-	 * @throws Exception
-	 */
-	protected function validate(string $imageUrl)
-	{
-		if (empty($imageUrl)) {
-			throw new \Exception('获取图片失败', 400);
-		}
-		//是否是一个图片
-		if (!in_array(get_headers($imageUrl, 1)['Content-Type'], $this->_allowMimes, true)) {
-			throw new \Exception('非法的图片', 400);
-		}
-		$this->imageInfo = $this->getImageInfo($imageUrl);
-		if (!in_array($this->imageInfo['mime'], $this->_allowMimes, true)) {
-			throw new \Exception('非法的图片类型', 400);
-		}
-		
-	}
-	
-	/**
-	 * @param string $imageUrl
-	 * @return resource
-	 */
-	protected function getContext(string $imageUrl)
-	{
-		$imageString = file_get_contents($imageUrl);
-		return imagecreatefromstring($imageString);
-	}
-	
-	/**
-	 * @param string $imageUrl
-	 * @return array|bool
-	 * @throws Exception
-	 */
-	protected function getImageInfo(string $imageUrl): array
-	{
-		$imageInfo = getimagesize($imageUrl);
-		if (empty($imageInfo)) {
-			throw new \Exception('获取图片类型失败', 400);
-		}
-		return $imageInfo;
-	}
-	
-	public function setZoomY()
-	{
-		$this->pixelZoomY =(int)ceil($this->pixelZoomX/($this->imageInfo[0]/$this->imageInfo[1]));
-		return $this->pixelZoomY;
-	}
-	
+//	echo '<br />';
 }
+header("Content-type: image/png");
+imagepng($imageNewContext,'file.png');
+imagedestroy($imageNewContext);
+
