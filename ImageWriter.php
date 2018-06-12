@@ -33,11 +33,10 @@ class ImageWriter extends WriterMiddleware
 		if($this->type===2){
 	    	$gray = $this->getGray($this->colors);
 		    $color = imagecolorallocate(  $this->imageContext, $gray, $gray, $gray);
-		    imagestring($this->imageContext,1,$x,$y,$ascii,$color);
-	    }else {
+	    } else {
 		    $color = imagecolorallocate(  $this->imageContext, $this->colors['red'], $this->colors['blue'], $this->colors['green']);
-		    imagestring($this->imageContext,1,$x,$y,$ascii,$color);
 	    }
+	    imagestring($this->imageContext,1,$x,$y,$ascii,$color);
 	}
 	
 	public function save(string $name)
