@@ -34,15 +34,15 @@ for ($y = 0;$y < $height; $y+=$pixelZoomY) {
 		$b = $colors['blue'];
 		$a = $colors['alpha'];
 		//灰度图片
-		$gray = (0.299 * $r + 0.578 * $g + 0.114 * $b);
-		$color = imagecolorallocate($imageNewContext, $gray, $gray, $gray);
-		imagestring($imageNewContext,1,$x,$y,'@',$color);
+//		$gray = (0.299 * $r + 0.578 * $g + 0.114 * $b);
+//		$color = imagecolorallocate($imageNewContext, $gray, $gray, $gray);
+//		imagestring($imageNewContext,1,$x,$y,'@',$color);
 		//彩色图片
-//		$gray = (0.299 * $r + 0.578 * $g + 0.114 * $b)/255;
-//		$index = ceil($gray*(count($chars)-1));
-//		$char = $chars[$index];
-//		$color = imagecolorallocate($imageNewContext, $r, $g, $b);
-//		imagestring($imageNewContext,1,$x,$y,$char,$color);
+		$gray = (0.299 * $r + 0.578 * $g + 0.114 * $b)/255;
+		$index = ceil($gray*(count($chars)-1));
+		$char = $chars[$index];
+		$color = imagecolorallocate($imageNewContext, $r, $g, $b);
+		imagestring($imageNewContext,1,$x,$y,$char,$color);
 		//网页字串
 //	    echo "<span style='color:rgb({$r},{$g},{$b});'>#</span>";
 		//ToDO 文件字串
